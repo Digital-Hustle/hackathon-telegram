@@ -14,3 +14,12 @@ def menu_keyboard():
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
+
+
+def support_keyboard():
+    buttons = [
+        [InlineKeyboardButton(text="‹ Назад", callback_data="menu")]
+    ]
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    return keyboard

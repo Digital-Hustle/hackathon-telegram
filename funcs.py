@@ -144,7 +144,6 @@ async def refresh_token(user_id: int) -> bool:
             async with session.post(url, json=payload) as response:
                 if response.status == 200:
                     data = await response.json()
-                    print(data)
                     await jwt_insert(
                         user_id=user_id,
                         access_token=data['accessToken'],

@@ -106,9 +106,12 @@ async def state_upload_file(message: types.Message, state: FSMContext) -> None:
         message_id = state_data.get('message_id')
 
         ALLOWED_EXTENSIONS = ['.xlsx', '.xml']
-        if file_ext not in ALLOWED_EXTENSIONS:
-            await bot.edit_message_text(chat_id=user_id, message_id=message_id, text="<b>❌ Ошибка: Недопустимый формат файла.</b>\n\nРазрешены только .xlsx и .xml. Попробуйте еще раз:", reply_markup=calculate_keyboard())
-            return
+        try:
+            if file_ext not in ALLOWED_EXTENSIONS:
+                await bot.edit_message_text(chat_id=user_id, message_id=message_id, text="<b>❌ Ошибка: Недопустимый формат файла.</b>\n\nРазрешены только .xlsx и .xml. Попробуйте еще раз:", reply_markup=calculate_keyboard())
+                return
+        except:
+            pass
 
         if message_id:
             await bot.edit_message_text(

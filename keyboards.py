@@ -23,3 +23,30 @@ def support_keyboard():
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
+
+
+def download_template_keyboard():
+    buttons = [
+        [InlineKeyboardButton(text="‹ Назад", callback_data="menu")]
+    ]
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    return keyboard
+
+
+def info_keyboard():
+    buttons = [
+        [InlineKeyboardButton(text="📈 Загрузить и рассчитать", callback_data="calculate")],
+        [InlineKeyboardButton(text="‹ Назад", callback_data="menu")]
+    ]
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    return keyboard
+
+def calculate_keyboard():
+    buttons = [
+        [InlineKeyboardButton(text="‹ Назад", callback_data="menu")]
+    ]
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    return keyboard

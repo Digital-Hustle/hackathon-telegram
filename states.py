@@ -6,3 +6,12 @@ class supportState(StatesGroup):
 
 class uploadFile(StatesGroup):
     message_id = State()
+
+class register(StatesGroup):
+    login = State()
+    password = State()
+    password_confirm = State()
+
+class login(StatesGroup):
+    login = State()
+    password = State()

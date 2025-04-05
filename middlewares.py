@@ -2,7 +2,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import Message, CallbackQuery, TelegramObject
 from typing import Callable, Awaitable, Dict, Any
 from cachetools import TTLCache
-from funcs import insert_new_user
+from funcs import insert_new_user, refresh_token
 
 class AntiFloodMiddleware(BaseMiddleware):
     def __init__(self, time_limit: int = 5) -> None:
@@ -44,5 +44,6 @@ class CheckNewUser(BaseMiddleware):
         user_id = event.from_user.id
         is_it_new = await insert_new_user(user_id)
         data["is_it_new"] = is_it_new
+        await refresh_token(user_id)
 
         return await handler(event, data)

@@ -1,4 +1,5 @@
 from aiogram import F, Router
+from aiogram.types import message_id
 from aiogram.utils.media_group import MediaGroupBuilder
 from aiogram.enums import ContentType
 from aiogram.filters import Command, CommandObject, StateFilter
@@ -6,6 +7,9 @@ from aiogram.fsm.context import FSMContext
 from states import *
 from config import *
 from keyboards import *
+from funcs import *
+
+
 router = Router()
 
 
@@ -13,7 +17,7 @@ router = Router()
 async def start_handler(message: types.Message=None, callback_query: types.CallbackQuery=None, state: FSMContext=None,) -> None:
     try:
         await state.clear()
-        caption = '<b>⌛️Экономьте как никогда ранее</b>\n\nБыстро рассчитайте нужные и максимально выгодные тарифы. Прощай волокита! 👋'
+        caption = '<b>⌛️Экономьте как никогда раньше</b>\n\nБыстро рассчитайте нужные и максимально выгодные тарифы. Прощай волокита! 👋'
         if message:
             await message.delete()
             user_id = message.from_user.id
@@ -77,6 +81,171 @@ async def info_handler(callback_query: types.CallbackQuery, state: FSMContext) -
         await state.set_state(supportState.message)
         user_id = callback_query.from_user.id
         await callback_query.message.edit_text("<b>💡 Как это работает?</b>\n\n1) Вы загружаете файл с вашим деталями потреблением электроэнергии\n2) Мы рассчитываем и предлагаем для Вас наиболее выгодный тариф\n3) Вы можете войти в свой личный кабинет для сохранения рассчетов", reply_markup=info_keyboard())
+    except Exception as e:
+        await error_handler(user_id, e)
+
+
+@router.callback_query(lambda c: c.data == "profile")
+async def profile_handler(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    try:
+        if await check_login(callback_query.from_user.id):
+            title = '<b>👤 Ваш профиль</b>\n\nЗдесь вы можете посмотреть историю своих расчетов.'
+            is_login=True
+        else:
+            title = '<b>👤 Ваш профиль</b>\n\nПохоже вы еще не вошли в свой личный кабинет. Войдите, чтобы иметь возможность сохранять свои расчеты.'
+            is_login=False
+
+        await state.set_state(supportState.message)
+        user_id = callback_query.from_user.id
+        await callback_query.message.edit_text(title, reply_markup=profile_keyboard(is_login=is_login))
+    except Exception as e:
+        await error_handler(user_id, e)
+
+
+@router.callback_query(lambda c: c.data == "register")
+async def register_handler(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    try:
+        await state.set_state(register.login)
+        user_id = callback_query.from_user.id
+        await callback_query.message.edit_text(
+            "<b>🔐 Регистрация</b>\n\nВведите ваш логин:",
+            reply_markup=auth_back_keyboard()
+        )
+        await state.update_data(message_id=callback_query.message.message_id)
+    except Exception as e:
+        await error_handler(user_id, e)
+
+
+@router.message(StateFilter(register.login))
+async def register_login_handler(message: types.Message, state: FSMContext) -> None:
+    try:
+        await state.update_data(login=message.text)
+        await state.set_state(register.password)
+        state_data = await state.get_data()
+        message_id = state_data.get('message_id')
+        await bot.edit_message_text(
+            chat_id=message.from_user.id,
+            message_id=message_id,
+            text="<b>🔐 Регистрация</b>\n\nВведите ваш пароль:",
+            reply_markup=auth_back_keyboard()
+        )
+        await message.delete()
+    except Exception as e:
+        await error_handler(message.from_user.id, e)
+
+
+@router.message(StateFilter(register.password))
+async def register_password_handler(message: types.Message, state: FSMContext) -> None:
+    try:
+        await state.update_data(password=message.text)
+        await state.set_state(register.password_confirm)
+        state_data = await state.get_data()
+        message_id = state_data.get('message_id')
+        await bot.edit_message_text(
+            chat_id=message.from_user.id,
+            message_id=message_id,
+            text="<b>🔐 Регистрация</b>\n\nПовторите ваш пароль:",
+            reply_markup=auth_back_keyboard()
+        )
+        await message.delete()
+    except Exception as e:
+        await error_handler(message.from_user.id, e)
+
+
+@router.message(StateFilter(register.password_confirm))
+async def register_password_confirm_handler(message: types.Message, state: FSMContext) -> None:
+    try:
+        await state.update_data(password_confirm=message.text)
+        data = await state.get_data()
+        message_id = data.get('message_id')
+
+        if await register_user(data['login'], data['password'], message.text):
+            await bot.edit_message_text(
+                chat_id=message.from_user.id,
+                message_id=message_id,
+                text="<b>✅ Регистрация завершена!</b>\n\nДля входа используйте эти же данные.",
+                reply_markup=menu_keyboard()
+            )
+        else:
+            await bot.edit_message_text(
+                chat_id=message.from_user.id,
+                message_id=message_id,
+                text="<b>❌ Регистрация неуспешна!</b>\n\nПароль должен быть от 5 до 255 символов.",
+                reply_markup=menu_keyboard()
+            )
+        await state.clear()
+    except Exception as e:
+        await error_handler(message.from_user.id, e)
+
+
+@router.callback_query(lambda c: c.data == "login")
+async def login_handler(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    try:
+        await state.set_state(login.login)
+        user_id = callback_query.from_user.id
+        await callback_query.message.edit_text(
+            "<b>🔐 Вход в аккаунт</b>\n\nВведите ваш логин:",
+            reply_markup=auth_back_keyboard()
+        )
+        await state.update_data(message_id=callback_query.message.message_id)
+    except Exception as e:
+        await error_handler(user_id, e)
+
+
+@router.message(StateFilter(login.login))
+async def login_login_handler(message: types.Message, state: FSMContext) -> None:
+    try:
+        await state.update_data(login=message.text)
+        await state.set_state(login.password)
+        state_data = await state.get_data()
+        message_id = state_data.get('message_id')
+        await bot.edit_message_text(
+            chat_id=message.from_user.id,
+            message_id=message_id,
+            text="<b>🔐 Вход в аккаунт</b>\n\nВведите ваш пароль:",
+            reply_markup=auth_back_keyboard()
+        )
+        await message.delete()
+    except Exception as e:
+        await error_handler(message.from_user.id, e)
+
+
+@router.message(StateFilter(login.password))
+async def login_password_handler(message: types.Message, state: FSMContext) -> None:
+    try:
+        await state.update_data(password=message.text)
+        data = await state.get_data()
+        message_id = data.get('message_id')
+
+        if await auth_user(message.from_user.id, data['login'], data['password']):
+            await bot.edit_message_text(
+                chat_id=message.from_user.id,
+                message_id=message_id,
+                text="<b>✅ Вход успешен!</b>\n\nТеперь у вас открыты все возможности!",
+                reply_markup=menu_keyboard()
+            )
+        else:
+            await bot.edit_message_text(
+                chat_id=message.from_user.id,
+                message_id=message_id,
+                text="<b>❌ Вход неуспешен!</b>\n\nНеверный логин или пароль",
+                reply_markup=menu_keyboard()
+            )
+        await state.clear()
+        await message.delete()
+    except Exception as e:
+        await error_handler(message.from_user.id, e)
+
+
+@router.callback_query(lambda c: c.data == "logout")
+async def logout_handler(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    try:
+        user_id = callback_query.from_user.id
+        await user_logout(user_id)
+        await callback_query.message.edit_text(
+            "<b>✅ Вы успешно вышли из аккаунта</b>\n\nЗаходите ещё.",
+            reply_markup=auth_back_keyboard()
+        )
     except Exception as e:
         await error_handler(user_id, e)
 

@@ -50,3 +50,30 @@ def calculate_keyboard():
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
+
+def auth_back_keyboard():
+    buttons = [
+        [InlineKeyboardButton(text="‹ Назад", callback_data="profile")]
+    ]
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    return keyboard
+
+
+def profile_keyboard(is_login=False):
+    if is_login:
+        buttons = [
+            [InlineKeyboardButton(text="📊 История", callback_data="login")],
+            [InlineKeyboardButton(text="🚪 Выйти из аккаунта", callback_data="logout")],
+            [InlineKeyboardButton(text="‹ Назад", callback_data="menu")]
+        ]
+    else:
+        buttons = [
+            [InlineKeyboardButton(text="👤 Войти", callback_data="login")],
+            [InlineKeyboardButton(text="🆕 Зарегестриоваться", callback_data="register")],
+            [InlineKeyboardButton(text="‹ Назад", callback_data="menu")]
+        ]
+
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    return keyboard

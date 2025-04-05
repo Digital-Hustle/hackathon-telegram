@@ -8,8 +8,18 @@ from config import BASE_URL
 
 async def insert_new_user(user_id):
     async with aiosqlite.connect('user.db') as conn:
+        async with conn.execute('SELECT COUNT(*) FROM user') as cursor:
+            count = (await cursor.fetchone())[0]
+
+        is_admin = False
+        if count == 0:
+            is_admin = True
+
         current_date = datetime.now().strftime('%d.%m.%Y')
-        async with conn.execute('INSERT OR IGNORE INTO user (user_id, reg_time) VALUES (?, ?)', (user_id, current_date)) as cursor:
+        async with conn.execute(
+                'INSERT OR IGNORE INTO user (user_id, reg_time, is_admin) VALUES (?, ?, ?)',
+                (user_id, current_date, is_admin)
+        ) as cursor:
             await conn.commit()
             affected_rows = cursor.rowcount
 
@@ -156,3 +166,12 @@ async def refresh_token(user_id: int) -> bool:
     except Exception as e:
         print(f"Ошибка при обновлении токена: {str(e)}")
         return False
+
+async def check_admin(user_id) -> bool:
+    async with aiosqlite.connect('user.db') as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(
+                'SELECT user_id FROM user WHERE user_id = ? AND is_Admin = ?',
+                (str(user_id), True)
+            )
+            return True if await cursor.fetchone() else False

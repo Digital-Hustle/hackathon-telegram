@@ -11,7 +11,7 @@ dotenv_path = find_dotenv()
 load_dotenv(dotenv_path)
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-ADMIN_ID = os.getenv('ADMIN_ID')
+SUPPORT_CHAT_ID = os.getenv('SUPPORT_CHAT_ID')
 IP = 'http://10.165.8.60:8080'
 BASE_URL = IP+'/api/v1'
 

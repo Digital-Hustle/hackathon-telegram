@@ -15,3 +15,6 @@ class register(StatesGroup):
 class login(StatesGroup):
     login = State()
     password = State()
+
+class admin(StatesGroup):
+    message_id = State()

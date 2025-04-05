@@ -5,7 +5,7 @@ import asyncio
 from aiogram.methods import DeleteWebhook
 from handlers import router
 from middlewares import *
-from config import dp, bot, ADMIN_ID
+from config import dp, bot, SUPPORT_CHAT_ID
 
 dp.include_router(router)
 
@@ -18,7 +18,7 @@ async def main() -> None:
 
     try:
         await bot(DeleteWebhook(drop_pending_updates=True))
-        await bot.send_message(chat_id=ADMIN_ID, text='<b>❇️ Бот включен.</b>')
+        await bot.send_message(chat_id=SUPPORT_CHAT_ID, text='<b>❇️ Бот включен.</b>')
         print("Бот успешно запустился")
         await dp.start_polling(bot, skip_updates=True)
     except Exception as e:
@@ -29,7 +29,7 @@ async def main() -> None:
 
 async def shutdown() -> None:
     try:
-        await bot.send_message(chat_id=ADMIN_ID, text='<b>🚫 Бот выключен.</b>')
+        await bot.send_message(chat_id=SUPPORT_CHAT_ID, text='<b>🚫 Бот выключен.</b>')
     except Exception as e:
         logging.warning(f"Не удалось отправить сообщение о выключении: {e}")
 

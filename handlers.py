@@ -1,8 +1,6 @@
 from aiogram import F, Router
-from aiogram.types import message_id
 from aiogram.utils.media_group import MediaGroupBuilder
-from aiogram.enums import ContentType
-from aiogram.filters import Command, CommandObject, StateFilter
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from states import *
 from config import *
@@ -21,10 +19,10 @@ async def start_handler(message: types.Message=None, callback_query: types.Callb
         if message:
             await message.delete()
             user_id = message.from_user.id
-            await message.answer(caption, reply_markup=menu_keyboard())
+            await message.answer(caption, reply_markup=await menu_keyboard(user_id))
         if callback_query:
             user_id = callback_query.from_user.id
-            await callback_query.message.edit_text(caption, reply_markup=menu_keyboard())
+            await callback_query.message.edit_text(caption, reply_markup=await menu_keyboard(user_id))
 
     except Exception as e:
         await error_handler(user_id, e)
@@ -164,14 +162,14 @@ async def register_password_confirm_handler(message: types.Message, state: FSMCo
                 chat_id=message.from_user.id,
                 message_id=message_id,
                 text="<b>✅ Регистрация завершена!</b>\n\nДля входа используйте эти же данные.",
-                reply_markup=menu_keyboard()
+                reply_markup=await menu_keyboard(message.from_user.id)
             )
         else:
             await bot.edit_message_text(
                 chat_id=message.from_user.id,
                 message_id=message_id,
                 text="<b>❌ Регистрация неуспешна!</b>\n\nПароль должен быть от 5 до 255 символов.",
-                reply_markup=menu_keyboard()
+                reply_markup=await menu_keyboard(message.from_user.id)
             )
         await state.clear()
     except Exception as e:
@@ -222,14 +220,14 @@ async def login_password_handler(message: types.Message, state: FSMContext) -> N
                 chat_id=message.from_user.id,
                 message_id=message_id,
                 text="<b>✅ Вход успешен!</b>\n\nТеперь у вас открыты все возможности!",
-                reply_markup=menu_keyboard()
+                reply_markup=await menu_keyboard(message.from_user.id)
             )
         else:
             await bot.edit_message_text(
                 chat_id=message.from_user.id,
                 message_id=message_id,
                 text="<b>❌ Вход неуспешен!</b>\n\nНеверный логин или пароль",
-                reply_markup=menu_keyboard()
+                reply_markup=await menu_keyboard(message.from_user.id)
             )
         await state.clear()
         await message.delete()
@@ -248,6 +246,43 @@ async def logout_handler(callback_query: types.CallbackQuery, state: FSMContext)
         )
     except Exception as e:
         await error_handler(user_id, e)
+
+
+@router.callback_query(lambda c: c.data == "admin_panel")
+async def admin_panel_handler(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    try:
+        user_id = callback_query.from_user.id
+        if await check_admin(user_id):
+            await callback_query.message.edit_text("<b>Админ панель</b>\n\nЗдесь Вы можете назначать новых админов, а такжу загружать новые таблицы.", reply_markup=admin_panel_keyboard())
+    except Exception as e:
+        await error_handler(user_id, e)
+
+
+@router.callback_query(lambda c: c.data == "admin_handler")
+async def admin_handler(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    try:
+        user_id = callback_query.from_user.id
+        if await check_admin(user_id):
+            await callback_query.message.edit_text("<b>✨ Назначение и удаление админов</b>\n\nВведите логин:", reply_markup=admin_panel_keyboard())
+            await state.set_state(admin.message_id)
+            await state.update_data(message_id=callback_query.message.message_id)
+    except Exception as e:
+        await error_handler(user_id, e)
+
+
+# @router.message(F.text, StateFilter(admin.message_id))
+# async def admin_role_handler(message: types.Message, state: FSMContext) -> None:
+#     try:
+#         if await check_admin(message.from_user.id):
+#             # login = message.text
+#             # запрос к бэкэнду для проверки текущего статуса
+#             # status = ...
+#             # state_data = await state.get_data()
+#             # message_id = state_data.get('message_id')
+#             # await bot.edit_message_text("<b>🎬 Выберите действие:</b>", reply_markup=admin_role_handler_handler(status))
+#             # await state.clear()
+#     except Exception as e:
+#         await error_handler(user_id, e)
 
 
 @router.callback_query(lambda c: c.data == "calculate")
@@ -315,7 +350,7 @@ async def state_files(message: types.Message, state: FSMContext) -> None:
         message_text = message.text
         user_name = message.from_user.first_name
         user_id = message.from_user.id
-        await bot.send_message(ADMIN_ID, f"<b>✉️ Пришло сообщение от </b>{user_name}\n\n<code>{message_text}</code>\n\nДля ответа на сообщение - ответьте на это сообщение\n\n#{message_id_to_reply}, #{user_id}")
+        await bot.send_message(SUPPORT_CHAT_ID, f"<b>✉️ Пришло сообщение от </b>{user_name}\n\n<code>{message_text}</code>\n\nДля ответа на сообщение - ответьте на это сообщение\n\n#{message_id_to_reply}, #{user_id}")
         await message.answer("<b>⚡️ Сообщение отправлено.</b>\n\nСкоро ответим!")
     except Exception as e:
         await error_handler(user_id, e)
@@ -323,12 +358,12 @@ async def state_files(message: types.Message, state: FSMContext) -> None:
 
 async def error_handler(user_id: int, e: str) -> None:
     print(f"Произошла ошибка у {user_id}\n{e}")
-    await bot.send_message(user_id, "<b>🤪 Произошло ошибка в обработке вашего запроса</b>\n\nИспользуйте новое меню:", reply_markup=menu_keyboard())
+    await bot.send_message(user_id, "<b>🤪 Произошло ошибка в обработке вашего запроса</b>\n\nИспользуйте новое меню:", reply_markup=await menu_keyboard(user_id))
 
 
 @router.message(F.text)
 async def handle_all_messages(message: types.Message):
-    if str(message.from_user.id) == str(ADMIN_ID):
+    if await check_admin(message.from_user.id):
         if message.reply_to_message:
             try:
                 reply_text = message.reply_to_message.text
@@ -357,6 +392,6 @@ async def handle_all_messages(message: types.Message):
         message_text = message.text
         user_name = message.from_user.first_name
         user_id = message.from_user.id
-        await bot.send_message(ADMIN_ID,
+        await bot.send_message(SUPPORT_CHAT_ID,
                                f"<b>✉️ Пришло сообщение от </b>{user_name}\n\n<code>{message_text}</code>\n\nДля ответа на сообщение - ответьте на это сообщение\n\n#{message_id_to_reply}, #{user_id}")
         await message.answer("<b>⚡️ Сообщение отправлено.</b>\n\nСкоро ответим!")
